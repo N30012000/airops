@@ -22,10 +22,6 @@ import hashlib
 import os
 from typing import Dict, List, Tuple
 import io
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -358,26 +354,22 @@ class MaintenanceSystem:
 # ============================================================================
 
 class ExportManager:
-    """Export to PDF and Excel"""
-    
-    @staticmethod
-    def export_to_excel(flights_df: pd.DataFrame, seats_df: pd.DataFrame, 
-                       maintenance_df: pd.DataFrame, weather_df: pd.DataFrame) -> bytes:
-        """Export all data to Excel"""
-        output = io.BytesIO()
-        
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            flights_df.to_excel(writer, sheet_name='Flights', index=False)
-            seats_df.to_excel(writer, sheet_name='Seat Sales', index=False)
-            maintenance_df.to_excel(writer, sheet_name='Maintenance', index=False)
-            weather_df.to_excel(writer, sheet_name='Weather', index=False)
-        
-        return output.getvalue()
+    """Export data to CSV format"""
     
     @staticmethod
     def export_to_csv(flights_df: pd.DataFrame) -> str:
         """Export flights to CSV"""
         return flights_df.to_csv(index=False)
+    
+    @staticmethod
+    def export_seats_to_csv(seats_df: pd.DataFrame) -> str:
+        """Export seats to CSV"""
+        return seats_df.to_csv(index=False)
+    
+    @staticmethod
+    def export_maintenance_to_csv(maint_df: pd.DataFrame) -> str:
+        """Export maintenance to CSV"""
+        return maint_df.to_csv(index=False)
 
 # ============================================================================
 # AUTHENTICATION UI
@@ -741,21 +733,38 @@ def page_settings():
     """Settings"""
     st.header("⚙️ Settings & Export")
     
-    st.subheader("Export All Data")
+    st.subheader("📥 Export Data")
     
-    if st.button("📊 Export Complete Report (Excel)"):
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
         flights_df = FlightRadarAPI.get_pia_flights()
-        seats_df = SeatAvailabilityAPI.get_realtime_seats()
-        maint_df = MaintenanceSystem.get_maintenance_schedule()
-        weather_df = WeatherAPI.get_pia_airport_weather()
-        
-        excel_data = ExportManager.export_to_excel(flights_df, seats_df, maint_df, weather_df)
-        
+        csv = ExportManager.export_to_csv(flights_df)
         st.download_button(
-            label="📥 Download Complete Report",
-            data=excel_data,
-            file_name=f"pia_complete_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            label="✈️ Flights (CSV)",
+            data=csv,
+            file_name=f"pia_flights_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+    
+    with col2:
+        seats_df = SeatAvailabilityAPI.get_realtime_seats()
+        csv = ExportManager.export_seats_to_csv(seats_df)
+        st.download_button(
+            label="🛫 Seats (CSV)",
+            data=csv,
+            file_name=f"pia_seats_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+    
+    with col3:
+        maint_df = MaintenanceSystem.get_maintenance_schedule()
+        csv = ExportManager.export_maintenance_to_csv(maint_df)
+        st.download_button(
+            label="🔧 Maintenance (CSV)",
+            data=csv,
+            file_name=f"pia_maintenance_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
         )
     
     st.markdown("---")
@@ -774,7 +783,7 @@ def page_settings():
     - ✅ Flight safety metrics
     - ✅ Live seat availability
     - ✅ User authentication
-    - ✅ Export to Excel/CSV
+    - ✅ Export to CSV
     - ✅ Real-time analytics
     """)
 
